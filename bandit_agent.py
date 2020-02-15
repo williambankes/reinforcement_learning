@@ -7,6 +7,12 @@ Created on Thu Feb 13 21:43:42 2020
 Implementation of the k armed bandit testbed described in Chapter 2 of the 
 Sutton & Barto book Reinforcement Learning An Introduction. The api is 
 based off my so far limited knowledge of the gym python library.
+
+To do:
+    
+- Average update function
+- graphs in function of their own
+
 """
 #%%
 #imports
@@ -23,22 +29,18 @@ class dis_action_space():
     To do: A better __str__ for larger spaces
     """
     
-    def __init__(self, minimum, maximum):
-        self.__min = minimum
-        self.__max = maximum
+    def __init__(self, k):
+        self.__k = k
         
     def sample(self):
-        return np.random.randint(self.__min, self.__max)
+        return np.random.randint(self.__k)
     
-    def get_min(self):
-        return self.__min
-    
-    def get_max(self):
-        return self.__max
+    def get_k(self):
+        return self.__k
     
     def __str__(self):
         return "action space: [" +\
-            ",".join([str(i) for i in range(self.__min, self.__max)]) + "]"
+            ",".join([str(i) for i in range(self.__k)]) + "]"
 
 class bandit():
     """
@@ -58,8 +60,10 @@ class bandit():
         self.__qa_star = np.random.normal(loc=mean, scale=std, size=k)
         
         #Public Variables
-        self.action_space_ = dis_action_space(0, k)
-        
+        self.action_space_ = dis_action_space(k)
+
+    def get_qa(self):
+        return ",".join([str(q) for q in self.__qa_star])
         
     def step(self, action):
         if self.__stationary:
@@ -86,15 +90,26 @@ class agent():
         self.__policy = policy
         self.__q_update = q_update
         self.__q = self.__init_q(bias, env.action_space_)
-        
+        #init count of actions taken:
+        self.__n = [0 for i in range(env.action_space_.get_k())]
         
     def __init_q(self, bias, action_space_):
-        return [bias for i in range(action_space_.get_min(), action_space_.get_max())]
+        if not bias:
+            return [0 for i in range(action_space_.get_k())]
+        else:
+            return [bias for i in range(action_space_.get_k())]
+        
+    def get_q(self):
+        return ",".join([str(q) for q in self.__q])        
     
     def action(self, env):
+        
+        #find action and increment count:
         action = self.__policy(env.action_space_, self.__q)
+        self.__n[action] += 1        
         reward = env.step(action)
-        self.__q[action] = self.__q_update(reward, self.__q[action])
+        self.__q[action] = self.__q_update(reward, self.__q[action], n=self.__n[action])
+        
         return reward
     
 #%%
@@ -113,7 +128,7 @@ class Policy():
         return action_space.sample()
     
     def __greedy_policy(self, action_space, q):
-        return np.argmax([q])
+        return np.argmax(q)
     
     def create_e_greedy_policy(self, epsilon):
         
@@ -134,10 +149,16 @@ class Policy():
 class Update():
         
     def create_constant_update(self, alpha):
-        def constant_update(reward, q):
+        def constant_update(reward, q, **kwargs):
             return q + (alpha * (reward - q))
         
         return constant_update
+    
+    def create_average_update(self):
+        def average_update(reward, q, **kwargs):
+            n = kwargs['n']            
+            return q + ((1/(n))*(reward - q))
+        return average_update
 
 #%%
 # Bandit agent testbed:
@@ -170,6 +191,13 @@ class testbed():
                                         for i in range(self.__tests)])
         return self.__results
     
+    
+    def debug_estimates(self):
+        i = np.random.randint(0, self.__tests)
+        
+        print(self.__agents[i].get_q())
+        print(self.__envs[i].get_qa())
+    
     def show(self):
         
         fig, ax = plt.subplots()
@@ -183,31 +211,31 @@ class testbed():
         
         return (fig, ax)
     
+ 
+#%%
     
-    def show_rewards(self, rewards):
-        fig, ax = plt.subplots()
-        
-        for r in rewards:
-            ax.plot(r)
-        
-        ax.set_xlabel('Time step')
-        ax.set_ylabel('Average Reward')
-        ax.set_title('Testbed results')
+def show_rewards(rewards):
+    fig, ax = plt.subplots()
+    
+    for r in rewards:
+        ax.plot(r)
+    
+    ax.set_xlabel('Time step')
+    ax.set_ylabel('Average Reward')
+    ax.set_title('Testbed results')
                 
+
 #%%
 #Run the testbed
 
-t = testbed(Policy().create_e_greedy_policy(0),
-            Update().create_constant_update(0.1), tests=2000)
-t1 = testbed(Policy().create_e_greedy_policy(0),
-            Update().create_constant_update(0.1), tests=2000)
+t = testbed(Policy().create_e_greedy_policy(0.1),
+            Update().create_average_update(), tests=2000)
+t1 = testbed(Policy().create_e_greedy_policy(0.01),
+            Update().create_average_update(), tests=2000)
+t2 = testbed(Policy().create_e_greedy_policy(0),
+             Update().create_average_update(), tests=2000)
 
-t1.show_rewards([t.run(), t1.run()])
-
-
-
-
-
+show_rewards([t.run(), t1.run(), t2.run()])
 
 
 
