@@ -10,14 +10,16 @@ based off my so far limited knowledge of the gym python library.
 
 To do:
     
-- Average update function
-- graphs in function of their own
+- Optimal Actions passed after a step
+- Non-stationary bandit behaviour (exercise 2.5)
 
 """
 #%%
 #imports
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+import progressbar
 
 #%%
 
@@ -53,11 +55,16 @@ class bandit():
     Todo: implement non-stantionary rewards
     """
     
-    def __init__(self, k=10, stationary=True, mean=0, std=1):
+    def __init__(self, k=10, stationary=True, mean=0, std=1, init=0):
         #Private Variables
         self.__k  = k
         self.__stationary = stationary
-        self.__qa_star = np.random.normal(loc=mean, scale=std, size=k)
+        
+        if stationary:
+            self.__qa_star = np.random.normal(loc=mean, scale=std, size=k)
+            self.__qa_star += init
+        else:
+            self.__qa_star = [init for i in range(k)]
         
         #Public Variables
         self.action_space_ = dis_action_space(k)
@@ -69,7 +76,9 @@ class bandit():
         if self.__stationary:
             return np.random.normal(loc=self.__qa_star[action], scale=1)
         else:
-            return False
+            #add random values to each step:
+            self.__qa_star += np.random.normal(loc=0, scale=0.01, size=self.__k)
+            return np.random.normal(loc=self.__qa_star[action], scale=1)
 
 #%%
 #Agent 
@@ -177,8 +186,10 @@ class testbed():
     to be displayed
     """
     
-    def __init__(self, policy, q_update, tests=1000, steps=1000, bias=False):
-        self.__envs = [bandit() for i in range(tests)]
+    def __init__(self, policy, q_update, tests=1000, steps=1000,
+                 k=10, stationary=True, mean=0, std=1, bias=False, init=0):
+        self.__envs = [bandit(k=k, stationary=stationary,
+                              mean=mean, std=std, init=init) for i in range(tests)]
         self.__agents = [agent(policy, q_update, self.__envs[i], bias) for i in range(tests)]
         self.__results = np.zeros(steps)
         
@@ -186,7 +197,7 @@ class testbed():
         self.__tests = tests
         
     def run(self):
-        for i in range(self.__steps):
+        for i in progressbar.progressbar(range(self.__steps)):
             self.__results[i] = np.mean([self.__agents[i].action(self.__envs[i])\
                                         for i in range(self.__tests)])
         return self.__results
@@ -213,7 +224,8 @@ class testbed():
     
  
 #%%
-    
+#General ustility functions:
+  
 def show_rewards(rewards):
     fig, ax = plt.subplots()
     
@@ -227,15 +239,73 @@ def show_rewards(rewards):
 
 #%%
 #Run the testbed
+    
+def fig_2_2():
 
-t = testbed(Policy().create_e_greedy_policy(0.1),
-            Update().create_average_update(), tests=2000)
-t1 = testbed(Policy().create_e_greedy_policy(0.01),
-            Update().create_average_update(), tests=2000)
-t2 = testbed(Policy().create_e_greedy_policy(0),
-             Update().create_average_update(), tests=2000)
+    t = testbed(Policy().create_e_greedy_policy(0.1),
+                Update().create_average_update(), tests=2000)
+    t1 = testbed(Policy().create_e_greedy_policy(0.01),
+                Update().create_average_update(), tests=2000)
+    t2 = testbed(Policy().create_e_greedy_policy(0),
+                 Update().create_average_update(), tests=2000)
+    
+    figsize = (10,5)
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    line_t, = ax.plot(t.run(), label='e=0.1')
+    line_t1, = ax.plot(t1.run(), label='e=0.01')
+    line_t2, = ax.plot(t2.run(), label='greedy')
+    
 
-show_rewards([t.run(), t1.run(), t2.run()])
+    plt.legend([line_t, line_t1, line_t2], ['e=0.1', 'e=0.01', 'greedy'])
+    
+    
+    ax.set_xlabel('Time step')
+    ax.set_ylabel('Average Reward')
+    ax.set_title('Testbed results')
+    plt.show()
+    
+    
+fig_2_2()
+
+#%%
+"""
+Exercise 2.5: qa_star start equal and then take a random walk with std=0.01 per
+step. Two runs one with sample averaging the other with a constant update param
+a=0.1.
+"""
+
+def ex_2_5():
+    
+    avg = testbed(Policy().create_e_greedy_policy(0.1),
+                  Update().create_average_update(), tests=2000, steps=10000, stationary=False)
+    const = testbed(Policy().create_e_greedy_policy(0.1),
+                    Update().create_constant_update(0.1), tests=2000, steps=10000, stationary=False)
+    
+    figsize = (10,5)
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    line_avg, = ax.plot(avg.run())
+    line_const, = ax.plot(const.run())
+    
+    plt.legend([line_avg, line_const], ['averaging update policy',
+               'constant update policy a=0.1'])
+           
+    ax.set_xlabel('Time step')
+    ax.set_ylabel('Average Reward')
+    ax.set_title('Testbed results')
+    plt.show()        
+    
+ex_2_5()
+
+#%%
+#Parallelisation test:
+
+
+
+
 
 
 
