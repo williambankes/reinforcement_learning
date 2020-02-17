@@ -8,17 +8,17 @@ Implementation of the k armed bandit testbed described in Chapter 2 of the
 Sutton & Barto book Reinforcement Learning An Introduction. The api is 
 based off my so far limited knowledge of the gym python library.
 
-To do:
-    
-- Optimal Actions passed after a step
-- Non-stationary bandit behaviour (exercise 2.5)
+fig_2_2: Recreates figure 2.2 
 
+ex_2_5: Exercise 2.5 - non-stationary k-armed bandits
+
+To do:
+- Parallelise the testbed for more efficient run times (can't use the progressbar lib when you do this)
 """
 #%%
 #imports
 import numpy as np
 import matplotlib.pyplot as plt
-import time
 import progressbar
 
 #%%
@@ -73,12 +73,18 @@ class bandit():
         return ",".join([str(q) for q in self.__qa_star])
         
     def step(self, action):
+        
+        optimal_action = np.argmax(self.__qa_star)
+        
         if self.__stationary:
-            return np.random.normal(loc=self.__qa_star[action], scale=1)
-        else:
-            #add random values to each step:
+            return (np.random.normal(loc=self.__qa_star[action], scale=1), 
+                    np.random.normal(loc=self.__qa_star[optimal_action], scale=1))
+        else:            
+            
+            optimal_reward = np.random.normal(loc=self.__qa_star[optimal_action], scale=1)
             self.__qa_star += np.random.normal(loc=0, scale=0.01, size=self.__k)
-            return np.random.normal(loc=self.__qa_star[action], scale=1)
+            return (np.random.normal(loc=self.__qa_star[action], scale=1),
+                    optimal_reward)
 
 #%%
 #Agent 
@@ -116,10 +122,10 @@ class agent():
         #find action and increment count:
         action = self.__policy(env.action_space_, self.__q)
         self.__n[action] += 1        
-        reward = env.step(action)
+        (reward, optimal_reward) = env.step(action)
         self.__q[action] = self.__q_update(reward, self.__q[action], n=self.__n[action])
         
-        return reward
+        return (reward, optimal_reward)
     
 #%%
 #Policy functions
@@ -192,15 +198,22 @@ class testbed():
                               mean=mean, std=std, init=init) for i in range(tests)]
         self.__agents = [agent(policy, q_update, self.__envs[i], bias) for i in range(tests)]
         self.__results = np.zeros(steps)
+        self.__optimal_rewards = np.zeros(steps)
         
         self.__steps = steps
         self.__tests = tests
         
     def run(self):
-        for i in progressbar.progressbar(range(self.__steps)):
-            self.__results[i] = np.mean([self.__agents[i].action(self.__envs[i])\
-                                        for i in range(self.__tests)])
-        return self.__results
+        for i in progressbar.progressbar(range(self.__steps)):                    
+            res = [self.__agents[i].action(self.__envs[i]) for i in range(self.__tests)]
+            
+            results, optimal_results = map(list,zip(*res))
+            #split zipped
+                        
+            self.__results[i] = np.mean(results)
+            self.__optimal_rewards[i] = np.mean(optimal_results)
+                    
+        return (self.__results, self.__optimal_rewards)
     
     
     def debug_estimates(self):
@@ -248,22 +261,35 @@ def fig_2_2():
                 Update().create_average_update(), tests=2000)
     t2 = testbed(Policy().create_e_greedy_policy(0),
                  Update().create_average_update(), tests=2000)
+        
+    t_res = t.run()
+    t1_res = t1.run()
+    t2_res = t2.run()
     
     figsize = (10,5)
+    fig, (ax1, ax2) = plt.subplots(figsize=figsize, ncols=2)
     
-    fig, ax = plt.subplots(figsize=figsize)
+    #Plot rewards
+    line_t, = ax1.plot(t_res[0])
+    line_t1, = ax1.plot(t1_res[0])
+    line_t2, = ax1.plot(t2_res[0])
     
-    line_t, = ax.plot(t.run(), label='e=0.1')
-    line_t1, = ax.plot(t1.run(), label='e=0.01')
-    line_t2, = ax.plot(t2.run(), label='greedy')
-    
-
     plt.legend([line_t, line_t1, line_t2], ['e=0.1', 'e=0.01', 'greedy'])
     
+    #plot optimal rewards:
     
-    ax.set_xlabel('Time step')
-    ax.set_ylabel('Average Reward')
-    ax.set_title('Testbed results')
+    line_t, = ax2.plot((t_res[0]/t_res[1]) * 100)
+    line_t1, = ax2.plot((t1_res[0]/t1_res[1]) * 100)
+    line_t2, = ax2.plot((t2_res[0]/t2_res[1]) * 100)
+
+    
+    ax1.set_xlabel('Time step')
+    ax1.set_ylabel('Average Reward')
+    ax1.set_title('Testbed results')
+    
+    ax2.set_xlabel('Time step')
+    ax2.set_ylabel('Optimal Action %')
+    ax2.set_ylim(0, 100)
     plt.show()
     
     
@@ -283,32 +309,31 @@ def ex_2_5():
     const = testbed(Policy().create_e_greedy_policy(0.1),
                     Update().create_constant_update(0.1), tests=2000, steps=10000, stationary=False)
     
+    avg_res = avg.run()
+    const_res = const.run()
+    
     figsize = (10,5)
+    fig, (ax, ax2) = plt.subplots(figsize=figsize, ncols=2)
     
-    fig, ax = plt.subplots(figsize=figsize)
     
-    line_avg, = ax.plot(avg.run())
-    line_const, = ax.plot(const.run())
+    
+    line_avg, = ax.plot(avg_res[0])
+    line_const, = ax.plot(const_res[0])
     
     plt.legend([line_avg, line_const], ['averaging update policy',
                'constant update policy a=0.1'])
+            
+    line_avg, = ax2.plot(avg_res[0])
+    line_const, = ax2.plot(const_res[0])
+            
            
     ax.set_xlabel('Time step')
     ax.set_ylabel('Average Reward')
     ax.set_title('Testbed results')
+    ax2.set_xlabel('Time step')
+    ax2.set_ylabel('Optimal Action %')
+    ax2.set_ylim(0, 100)
     plt.show()        
     
 ex_2_5()
-
-#%%
-#Parallelisation test:
-
-
-
-
-
-
-
-
-
 
