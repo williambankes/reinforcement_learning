@@ -6,7 +6,8 @@ Implementation of Gambler's Problem from Chapter 4 of the
 Sutton & Barto book Reinforcement Learning An Introduction.
 
 TODO:
-- Implement the problem in a class (make it easier to read)
+- Add an epoch option to the value_iteration so we can see how many iterations convergence takes
+- Add an option to specify how many policy steps per value eval we take?
 
 Aims:
 - Investigate the optimal solutions to the problem under different conditions
@@ -20,114 +21,105 @@ Aims:
 
 import numpy as np
 import matplotlib.pyplot as plt
-import random
-    
+
 #%%
-#Write a really bare bones implementation for the gambler's problem:
-#n.b. indexing from 1 instead of 0 because it makes the problem nicer
-        
-final_state = 99
-reward = 1
-p_h = 0.4
-epochs = 1
 
-states = [x for x in range(0, final_state)]
-policy = [0 for x in range(0, final_state)]
-
-vs = [0 for x in range(0, final_state)]
-
-# The final state isn't in the states: draw the MDP for this problem
-
-def create_win_loss_states(actions, state, final_state):
-    """
-    create win loss values creates the potential win and loss states for all
-    actions taken from a certain state. Bounds max or min values
-    """
-    output = list()
+class gambler():
     
-    for a in actions:
+    def __init__(self, ph=0.4, reward=1, final_state=100):
+        """
+        ph -> probability of heads
+        reward -> reward for reaching the win state (final_state)
+        final_state -> the final win state of the problem
+        """
         
-        win = state + a
-        loss = state - a 
+        self.__ph = ph
+        self.__r = reward
+        self.__final_state = final_state
+        self.__vs = [0 for x in range(0, final_state)]
+        self.__policy = [0 for x in range(0, final_state)]
+        self.__states = [x for x in range(0, final_state)]
+        
+    def value_iteration(self, epsilon=0.001):
+        """
+        Use value_iteration to find the optimal value function and policy. 
+        """
+        
+        theta = 1000
+        
+        while theta > epsilon: 
+           
+            theta = 0
+        
+            for s in self.__states:
+        
+                vs_old = self.__vs[s]
+        
+                self.__vs[s], self.__policy[s] = self.__max_vs(s)
+        
+                theta = max([theta, abs(self.__vs[s] - vs_old)])
             
-        output.append((win, loss))
+    def __max_vs(self, state):
+        """
+        Find the maximum expected reward for state s: 
+                        max_a Sum p(s', r | s,a)[r + gammaV(s')]
+        """
         
-    return output
+        #Possible actions:
+        max_action = min([state, self.__final_state - state])
+        
+        actions = [x for x in range(0, max_action + 1)]
+         
+        win_loss_states = self.__create_win_loss_states(actions, state)
+         
+        bellman_res = [self.__bellman_equ(win, loss) for win, loss in win_loss_states]
+        
+        return max(bellman_res), bellman_res.index(max(bellman_res))
 
-def bellman_equ(vs, win_state, loss_state, final_state, reward):
-    """
-    Output the results of the bellman_equ for a win_loss state pair. The final
-    state and reward can also be edited as they affect the returned value.
-    """
 
-    if win_state == final_state:       
-     
-        win = p_h * (reward)
-   
-    else:
-        win = p_h * vs[win_state]
-             
-    loss = (1 - p_h) * vs[loss_state]
-     
-    return win + loss
+    def __create_win_loss_states(self, actions, state):
+        """
+        create win loss values creates the potential win and loss states for all
+        actions taken from a certain state. Bounds max or min values
+        """
+        output = list()
+        
+        for a in actions:
+            
+            win = state + a
+            loss = state - a 
+                
+            output.append((win, loss))
+            
+        return output    
+
+
+    def __bellman_equ(self, win_state, loss_state):
+        """
+        Output the results of the bellman_equ for a win_loss state pair. The final
+        state and reward can also be edited as they affect the returned value.
+        """
     
-    
-def max_vs(state, vs, reward, p_h, final_state):
-    #find the maximum value_function for state s
-    #max_a Sum p(s', r | s,a)[r + gammaV(s')] ... as the problem is episodic we can ignore gamma....
-    
-    #Possible actions:
-    max_action = min([state, final_state - state])
-    
-    actions = [x for x in range(0, max_action + 1)]
-     
-    win_loss_states = create_win_loss_states(actions, state, final_state)
-             
-    bellman_res = [bellman_equ(vs, win, loss, final_state, reward)\
-                for win, loss in win_loss_states]
-    
-    return max(bellman_res), bellman_res.index(max(bellman_res))
-
-
-
-epochs = 10
-
-#for e in range(epochs):
-
-theta = 1000
-
-
-while theta > 0.001: 
+        if win_state == self.__final_state:       
+         
+            win = self.__ph * (self.__r)
        
-    theta = 0
+        else:
+            win = self.__ph * self.__vs[win_state]
+                 
+        loss = (1 - self.__ph) * self.__vs[loss_state]
+         
+        return win + loss  
     
-    for s in states:
+    def plot_results(self):
         
-        vs_old = vs[s]
+        fig, axes = plt.subplots(nrows=2, ncols=1)
         
-        vs[s], policy[s] = max_vs(s, vs, reward, p_h, final_state)
-        
-        theta = max([theta, abs(vs[s] - vs_old)])
-        
-
-#%%
-
-fig, axes = plt.subplots(nrows=2, ncols=1)
-
-axes[0].plot(vs)
-axes[1].scatter(states, policy)
-
-#Whilst the policy shown in the book is optimal, ties for actions in max value func mean that multiple less pretty functions exist.
+        axes[0].plot(self.__vs)
+        axes[1].scatter(self.__states, self.__policy)
         
         
-    
-
-
-
-        
-    
-
-            
-        
-    
+g = gambler()
+g.value_iteration()
+g.plot_results()
     
