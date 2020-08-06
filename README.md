@@ -19,3 +19,8 @@ Primarily exercises and example from Reinforcement Learning an Introduction (Sut
   - The OpenAi gym blackjack environment was edited so that the .reset method allowed one to set the state it was reset to (see blackjack_edited.py)
   - To run ensure blackjack_edited.py is in the current active directory, this can be done by changing the path in the os.chdir() function in the first few lines
   
+  ### blackjack_edited.py
+  
+  - Edited the OpenAI gym environment reset method to accept an initial state of the form: `init_state={'player':(1,2), 'dealer':(1)}`
+  
+  
