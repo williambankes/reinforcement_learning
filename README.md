@@ -15,11 +15,15 @@ Primarily exercises and example from Reinforcement Learning an Introduction (Sut
   - The extact policy shown in the book is hard to re-create exactly as multiple different optimal policies exist for this setup
   - Ensuring the environment is exactly the same as that specified in the book caught me out
   
+  ![image](https://github.com/williambankes/reinforcement_learning/blob/master/figures/gamble_policy_and_vs.png?raw=true)
+  
  ## monte_carlo_off_policy.py
   - An implementation of the blackjack example touched upon in Chapter 5. 
   - Using weighted and ordinary importance sampling methods to evaluate a set initial state in blackjack
   - The OpenAi gym blackjack environment was edited so that the .reset method allowed one to set the state it was reset to (see blackjack_edited.py)
   - To run ensure blackjack_edited.py is in the current active directory, this can be done by changing the path in the os.chdir() function in the first few lines
+  
+   ![image](https://github.com/williambankes/reinforcement_learning/blob/master/figures/weight_vs_ordinary_sampling_mse.png?raw=true)
   
   ### blackjack_edited.py
   
