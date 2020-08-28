@@ -7,6 +7,8 @@ Primarily exercises and example from Reinforcement Learning an Introduction (Sut
   - A testbed class runs multiple simulations of the problem and plots of the results evolving dynamically are produced
   - Two different update methods mentioned in the book are re-created
   
+  ![test](https://github.com/williambankes/reinforcement_learning/blob/master/figures/image.jpg?raw=true)
+  
 ## gambler_problem.py 
   - An implementation of the gambler problem from Chapter 4
   - Re-creates the environment and dynamic programming method used to estimate the action value function for each state
