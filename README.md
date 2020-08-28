@@ -7,7 +7,7 @@ Primarily exercises and example from Reinforcement Learning an Introduction (Sut
   - A testbed class runs multiple simulations of the problem and plots of the results evolving dynamically are produced
   - Two different update methods mentioned in the book are re-created
   
-  ![test](https://github.com/williambankes/reinforcement_learning/tree/master/figures/bandit_rewards.png?raw=true)
+  ![image](https://github.com/williambankes/reinforcement_learning/blob/master/figures/bandit_rewards.png?raw=true)
   
 ## gambler_problem.py 
   - An implementation of the gambler problem from Chapter 4
