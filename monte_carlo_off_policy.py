@@ -484,6 +484,9 @@ def mean_squared_error(env, sample_policy, target_policy):
     axs.plot(x, weight_mse, label='weighted importance sampling')
     axs.plot(x, ordinary_mse, label='ordinary importance sampling')
     
+    axs.set_xlabel('iterations')
+    axs.set_ylabel('mean squared error')
+    
     plt.legend()
     plt.xscale('log')
     plt.ylim([-1, 5])

@@ -118,6 +118,12 @@ class gambler():
         axes[0].plot(self.__vs)
         axes[1].scatter(self.__states, self.__policy)
         
+        axes[0].set_xlabel('state')
+        axes[0].set_ylabel('value function')
+        
+        axes[1].set_xlabel('state')
+        axes[1].set_ylabel('optimal policy')
+        
         
 g = gambler()
 g.value_iteration()
